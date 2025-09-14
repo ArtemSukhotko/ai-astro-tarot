@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from 'react';
+import { CosmicBackground } from '@/components/ui/CosmicBackground';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -77,25 +78,7 @@ export const NatalForm: React.FC<NatalFormProps> = ({
 
   return (
     <div className={cn("relative", className)}>
-      {/* Animated cosmic background */}
-      <div className="absolute inset-0 overflow-hidden rounded-xl">
-        <div className="absolute inset-0 bg-gradient-to-br from-background via-card to-sidebar opacity-95" />
-        <div className="absolute inset-0">
-          {/* Floating particles */}
-          {[...Array(20)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 bg-primary/30 rounded-full animate-pulse"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 3}s`,
-                animationDuration: `${2 + Math.random() * 2}s`
-              }}
-            />
-          ))}
-        </div>
-      </div>
+      <CosmicBackground />
 
       <Card className="relative border-primary/20 bg-gradient-to-br from-card/90 via-card/95 to-sidebar/90 backdrop-blur-sm shadow-2xl shadow-primary/10">
         <CardHeader className="text-center space-y-4">
@@ -129,6 +112,7 @@ export const NatalForm: React.FC<NatalFormProps> = ({
                   id="name"
                   type="text"
                   placeholder="Ваше имя (необязательно)"
+                  autoComplete="name"
                   value={formData.name || ''}
                   onChange={(e) => handleFieldChange('name', e.target.value)}
                   onFocus={() => setFocusedField('name')}
@@ -158,6 +142,7 @@ export const NatalForm: React.FC<NatalFormProps> = ({
                   id="birthDate"
                   type="date"
                   value={formData.birthDate || ''}
+                  autoComplete="off"
                   onChange={(e) => handleFieldChange('birthDate', e.target.value)}
                   onFocus={() => setFocusedField('birthDate')}
                   onBlur={() => setFocusedField(null)}
@@ -194,6 +179,7 @@ export const NatalForm: React.FC<NatalFormProps> = ({
                   type="time"
                   placeholder="Время рождения (по возможности)"
                   value={formData.birthTime || ''}
+                  autoComplete="off"
                   onChange={(e) => handleFieldChange('birthTime', e.target.value)}
                   onFocus={() => setFocusedField('birthTime')}
                   onBlur={() => setFocusedField(null)}
@@ -226,6 +212,7 @@ export const NatalForm: React.FC<NatalFormProps> = ({
                   type="text"
                   placeholder="Место рождения (город)"
                   value={formData.birthPlace || ''}
+                  autoComplete="off"
                   onChange={(e) => handleFieldChange('birthPlace', e.target.value)}
                   onFocus={() => setFocusedField('birthPlace')}
                   onBlur={() => setFocusedField(null)}

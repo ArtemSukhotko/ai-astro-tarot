@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Ecliptic, Observer, SiderealTime, GeoVector, Body, Equator, Horizon } from 'astronomy-engine';
 
 // Types
 interface BirthData {
@@ -122,100 +123,67 @@ function getCoordinates(place: string): Coordinates {
   return mockLocations['moscow'];
 }
 
-// Mock astronomical calculations
-function calculateJulianDay(date: string, time: string): number {
-  const [year, month, day] = date.split('-').map(Number);
-  const [hour, minute] = time.split(':').map(Number);
-  
-  // Simplified Julian Day calculation
-  const a = Math.floor((14 - month) / 12);
-  const y = year + 4800 - a;
-  const m = month + 12 * a - 3;
-  
-  const jdn = day + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
-  const jd = jdn + (hour - 12) / 24 + minute / 1440;
-  
-  return jd;
-}
+// Real astronomical calculations using astronomy-engine
+function calculateNatalChart(birthData: BirthData, coordinates: Coordinates): { natalChart: NatalChart; julianDay: number; siderealTime: number } {
+    const signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
+    const birthDateTime = new Date(`${birthData.birthDate}T${birthData.birthTime}:00Z`);
 
-function calculateSiderealTime(jd: number, longitude: number): number {
-  // Simplified sidereal time calculation
-  const t = (jd - 2451545.0) / 36525.0;
-  const gmst = 280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * t * t - t * t * t / 38710000.0;
-  const lst = gmst + longitude;
-  return ((lst % 360) + 360) % 360;
-}
+    const observer = new Observer(coordinates.latitude, coordinates.longitude, 0);
+    const time = new Date(birthDateTime);
 
-// Mock planetary position calculations
-function calculatePlanetaryPositions(jd: number, coordinates: Coordinates): NatalChart['planets'] {
-  const signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
-  
-  // Mock calculations based on ephemeris data
-  const baseSun = (jd - 2451545) * 0.9856 + 280;
-  const baseMoon = (jd - 2451545) * 13.176 + 50;
-  
-  return {
-    sun: {
-      sign: signs[Math.floor(((baseSun % 360) / 30)) % 12],
-      degree: Math.round(((baseSun % 360) % 30) * 100) / 100,
-      house: Math.floor(Math.random() * 12) + 1,
-      retrograde: false
-    },
-    moon: {
-      sign: signs[Math.floor(((baseMoon % 360) / 30)) % 12],
-      degree: Math.round(((baseMoon % 360) % 30) * 100) / 100,
-      house: Math.floor(Math.random() * 12) + 1,
-      retrograde: false
-    },
-    mercury: {
-      sign: signs[Math.floor(((baseSun + 15) % 360 / 30)) % 12],
-      degree: Math.round((((baseSun + 15) % 360) % 30) * 100) / 100,
-      house: Math.floor(Math.random() * 12) + 1,
-      retrograde: Math.random() < 0.2
-    },
-    venus: {
-      sign: signs[Math.floor(((baseSun + 45) % 360 / 30)) % 12],
-      degree: Math.round((((baseSun + 45) % 360) % 30) * 100) / 100,
-      house: Math.floor(Math.random() * 12) + 1,
-      retrograde: Math.random() < 0.1
-    },
-    mars: {
-      sign: signs[Math.floor(((baseSun + 120) % 360 / 30)) % 12],
-      degree: Math.round((((baseSun + 120) % 360) % 30) * 100) / 100,
-      house: Math.floor(Math.random() * 12) + 1,
-      retrograde: Math.random() < 0.15
-    },
-    jupiter: {
-      sign: signs[Math.floor(((baseSun + 200) % 360 / 30)) % 12],
-      degree: Math.round((((baseSun + 200) % 360) % 30) * 100) / 100,
-      house: Math.floor(Math.random() * 12) + 1,
-      retrograde: Math.random() < 0.3
-    },
-    saturn: {
-      sign: signs[Math.floor(((baseSun + 300) % 360 / 30)) % 12],
-      degree: Math.round((((baseSun + 300) % 360) % 30) * 100) / 100,
-      house: Math.floor(Math.random() * 12) + 1,
-      retrograde: Math.random() < 0.4
-    },
-    uranus: {
-      sign: signs[Math.floor(((baseSun + 80) % 360 / 30)) % 12],
-      degree: Math.round((((baseSun + 80) % 360) % 30) * 100) / 100,
-      house: Math.floor(Math.random() * 12) + 1,
-      retrograde: Math.random() < 0.5
-    },
-    neptune: {
-      sign: signs[Math.floor(((baseSun + 180) % 360 / 30)) % 12],
-      degree: Math.round((((baseSun + 180) % 360) % 30) * 100) / 100,
-      house: Math.floor(Math.random() * 12) + 1,
-      retrograde: Math.random() < 0.5
-    },
-    pluto: {
-      sign: signs[Math.floor(((baseSun + 270) % 360 / 30)) % 12],
-      degree: Math.round((((baseSun + 270) % 360) % 30) * 100) / 100,
-      house: Math.floor(Math.random() * 12) + 1,
-      retrograde: Math.random() < 0.5
-    }
-  };
+    const julianDay = time.getTime() / 86400000 + 2440587.5;
+    const siderealTime = SiderealTime(time, coordinates.longitude);
+
+    const getPlanetPosition = (body: Body): PlanetaryPosition => {
+        const ecl = Ecliptic(body, time);
+        const signIndex = Math.floor(ecl.lon / 30);
+        const degree = ecl.lon % 30;
+        
+        // Mock house and retrograde for now
+        const house = Math.floor(Math.random() * 12) + 1;
+        const geo = GeoVector(body, time, true);
+
+        return {
+            sign: signs[signIndex],
+            degree: parseFloat(degree.toFixed(2)),
+            house: house,
+            retrograde: geo.dr < 0,
+        };
+    };
+
+    const planets: NatalChart['planets'] = {
+        sun: getPlanetPosition(Body.Sun),
+        moon: getPlanetPosition(Body.Moon),
+        mercury: getPlanetPosition(Body.Mercury),
+        venus: getPlanetPosition(Body.Venus),
+        mars: getPlanetPosition(Body.Mars),
+        jupiter: getPlanetPosition(Body.Jupiter),
+        saturn: getPlanetPosition(Body.Saturn),
+        uranus: getPlanetPosition(Body.Uranus),
+        neptune: getPlanetPosition(Body.Neptune),
+        pluto: getPlanetPosition(Body.Pluto),
+    };
+
+    // Simplified house calculation for Ascendant
+    const ascEcl = Equator(Body.Sun, time, observer, true, true);
+    const ascendantDegrees = (siderealTime - ascEcl.ra) % 360;
+    const risingSignIndex = Math.floor(ascendantDegrees / 30);
+    const risingSign = signs[risingSignIndex];
+
+    const houses = Array.from({ length: 12 }, (_, i) => (ascendantDegrees + i * 30) % 360);
+
+    const aspects = calculateAspects(planets);
+
+    const natalChart: NatalChart = {
+        sunSign: planets.sun.sign,
+        moonSign: planets.moon.sign,
+        risingSign: risingSign,
+        planets,
+        houses,
+        aspects,
+    };
+    
+    return { natalChart, julianDay, siderealTime };
 }
 
 // Calculate aspects between planets
@@ -380,31 +348,9 @@ export async function POST(request: NextRequest) {
 
     // Get coordinates for birth place
     const coordinates = getCoordinates(birthData.birthPlace);
-    
-    // Calculate Julian Day
-    const julianDay = calculateJulianDay(birthData.birthDate, birthData.birthTime);
-    
-    // Calculate sidereal time
-    const siderealTime = calculateSiderealTime(julianDay, coordinates.longitude);
-    
-    // Calculate planetary positions
-    const planets = calculatePlanetaryPositions(julianDay, coordinates);
-    
-    // Calculate house cusps (simplified)
-    const houses = Array.from({ length: 12 }, (_, i) => (siderealTime + i * 30) % 360);
-    
-    // Calculate aspects
-    const aspects = calculateAspects(planets);
-    
-    // Build natal chart
-    const natalChart: NatalChart = {
-      sunSign: planets.sun.sign,
-      moonSign: planets.moon.sign,
-      risingSign: planets.sun.sign, // Simplified - should be calculated from houses
-      planets,
-      houses,
-      aspects
-    };
+
+    // Calculate natal chart using the new function
+    const { natalChart, julianDay, siderealTime } = calculateNatalChart(birthData, coordinates);
     
     // Generate prediction
     const prediction = generatePrediction(birthData.name, natalChart);
